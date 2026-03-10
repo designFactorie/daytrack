@@ -15,44 +15,54 @@ const navItems = [
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export default function Sidebar({ collapsed, onToggle, onLogout }) {
+export default function Sidebar({ collapsed, onToggle, onLogout, mobileOpen, onClose }) {
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-brand">
-        {!collapsed && (
-          <>
-            <span className="brand-icon">⚡</span>
-            <span className="brand-text">DayTrack</span>
-          </>
-        )}
-        <button className="collapse-btn" onClick={onToggle}>
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
-      </div>
+    <>
+      {/* Mobile Overlay */}
+      {mobileOpen && <div className="sidebar-overlay" onClick={onClose} />}
 
-      <nav className="sidebar-nav">
-        {navItems.map(item => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/'}
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            title={collapsed ? item.label : undefined}
-          >
-            <item.icon size={20} />
-            {!collapsed && <span>{item.label}</span>}
-          </NavLink>
-        ))}
-      </nav>
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-brand">
+          {!collapsed && (
+            <>
+              <span className="brand-icon">⚡</span>
+              <span className="brand-text">DayTrack</span>
+            </>
+          )}
+          <button className="collapse-btn hide-mobile" onClick={onToggle}>
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+          <button className="collapse-btn show-mobile" onClick={onClose}>
+            <ChevronLeft size={20} />
+          </button>
+        </div>
 
-      <div className="sidebar-footer">
-        <button className="nav-item logout-btn" onClick={onLogout} title="Logout">
-          <LogOut size={20} />
-          {!collapsed && <span>Logout</span>}
-        </button>
-      </div>
+        <nav className="sidebar-nav">
+          {navItems.map(item => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              title={collapsed ? item.label : undefined}
+              onClick={() => {
+                if (window.innerWidth <= 768) onClose();
+              }}
+            >
+              <item.icon size={20} />
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
 
-      <style>{`
+        <div className="sidebar-footer">
+          <button className="nav-item logout-btn" onClick={onLogout} title="Logout">
+            <LogOut size={20} />
+            {!collapsed && <span>Logout</span>}
+          </button>
+        </div>
+
+        <style>{`
         .sidebar {
           position: fixed;
           top: 0;
@@ -157,12 +167,27 @@ export default function Sidebar({ collapsed, onToggle, onLogout }) {
         @media (max-width: 768px) {
           .sidebar {
             transform: translateX(-100%);
+            width: var(--sidebar-width) !important;
           }
           .sidebar.mobile-open {
             transform: translateX(0);
           }
+          .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 95;
+            animation: fadeIn 200ms ease;
+          }
+          .hide-mobile { display: none !important; }
+          .show-mobile { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .show-mobile { display: none !important; }
         }
       `}</style>
-    </aside>
+      </aside>
+    </>
   );
 }
