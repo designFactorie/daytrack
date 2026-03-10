@@ -1,13 +1,11 @@
+import { supabaseService } from '../db/supabaseService';
+
 async function getApiKey() {
-    const { default: db } = await import('../db/database.js');
-    const setting = await db.settings.where('key').equals('geminiApiKey').first();
-    return setting?.value?.trim() || '';
+    return await supabaseService.settings.get('geminiApiKey', '');
 }
 
 async function getModelName() {
-    const { default: db } = await import('../db/database.js');
-    const setting = await db.settings.where('key').equals('geminiModel').first();
-    return setting?.value || 'gemini-1.5-flash';
+    return await supabaseService.settings.get('geminiModel', 'gemini-1.5-flash');
 }
 
 export async function listModels() {
