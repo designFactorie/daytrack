@@ -115,10 +115,10 @@ export const supabaseService = {
             if (error) throw error;
             return data;
         },
-        async get(key) {
+        async get(key, defaultValue = null) {
             const { data, error } = await supabase.from('settings').select('value').eq('key', key).maybeSingle();
-            if (error) return null;
-            return data?.value || null;
+            if (error) return defaultValue;
+            return data?.value || defaultValue;
         },
         async set(key, value) {
             const { data, error } = await supabase.from('settings').upsert({ key, value }).select();
