@@ -73,7 +73,7 @@ export default function Clients() {
             setShowModal(false);
         } catch (err) {
             console.error('Error saving client:', err);
-            setError('Failed to save client. Please check your connection and try again.');
+            setError(err.message || 'Failed to save client. Please check your connection and try again.');
         } finally {
             setSaving(false);
         }

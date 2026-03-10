@@ -58,7 +58,7 @@ export default function Employees() {
             setShowModal(false);
         } catch (err) {
             console.error('Error saving employee:', err);
-            setError('Failed to save employee. Please try again.');
+            setError(err.message || 'Failed to save employee. Please try again.');
         } finally {
             setSaving(false);
         }

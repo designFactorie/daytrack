@@ -99,7 +99,7 @@ export default function Tasks() {
             setShowModal(false);
         } catch (err) {
             console.error('Error saving task:', err);
-            setError('Failed to save task. Please try again.');
+            setError(err.message || 'Failed to save task. Please try again.');
         } finally {
             setSaving(false);
         }
