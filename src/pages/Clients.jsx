@@ -19,6 +19,8 @@ export default function Clients() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ ...defaultClient });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
     const clients = useSupabaseData('clients') || [];
 
@@ -38,6 +40,7 @@ export default function Clients() {
     const openAdd = () => {
         setEditing(null);
         setForm({ ...defaultClient });
+        setError('');
         setShowModal(true);
     };
 
@@ -49,19 +52,31 @@ export default function Clients() {
 
     const save = async () => {
         if (!form.name.trim()) return;
-        const data = {
-            ...form,
-            revenueValue: Number(form.revenueValue) || 0,
-            amountCollected: Number(form.amountCollected) || 0,
-            archived: form.archived || false
-        };
-        if (editing) {
-            await supabaseService.clients.update(editing, data);
-        } else {
-            data.createdAt = new Date().toISOString();
-            await supabaseService.clients.add(data);
+        setSaving(true);
+        setError('');
+        try {
+            const data = {
+                ...form,
+                revenueValue: Number(form.revenueValue) || 0,
+                amountCollected: Number(form.amountCollected) || 0,
+                contractStart: form.contractStart || null,
+                contractEnd: form.contractEnd || null,
+                archived: !!form.archived
+            };
+
+            if (editing) {
+                await supabaseService.clients.update(editing, data);
+            } else {
+                data.createdAt = new Date().toISOString();
+                await supabaseService.clients.add(data);
+            }
+            setShowModal(false);
+        } catch (err) {
+            console.error('Error saving client:', err);
+            setError('Failed to save client. Please check your connection and try again.');
+        } finally {
+            setSaving(false);
         }
-        setShowModal(false);
     };
 
     const archive = async (id) => {
@@ -182,9 +197,14 @@ export default function Clients() {
                     <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{editing ? 'Edit Client' : 'Add Client'}</h2>
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>✕</button>
+                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} disabled={saving}>✕</button>
                         </div>
                         <div className="modal-body">
+                            {error && (
+                                <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--danger)', fontSize: 'var(--fs-sm)' }}>
+                                    {error}
+                                </div>
+                            )}
                             <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Client Name *</label>
@@ -247,9 +267,9 @@ export default function Clients() {
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.name.trim()}>
-                                {editing ? 'Update' : 'Add'} Client
+                            <button className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
+                            <button className="btn btn-primary" onClick={save} disabled={!form.name.trim() || saving}>
+                                {saving ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update' : 'Add') + ' Client'}
                             </button>
                         </div>
                     </div>

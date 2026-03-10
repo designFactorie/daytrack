@@ -13,6 +13,8 @@ export default function Employees() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ ...defaultEmployee });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
     const employees = useSupabaseData('employees') || [];
     const tasks = useSupabaseData('tasks') || [];
@@ -33,6 +35,7 @@ export default function Employees() {
     const openAdd = () => {
         setEditing(null);
         setForm({ ...defaultEmployee });
+        setError('');
         setShowModal(true);
     };
 
@@ -44,12 +47,21 @@ export default function Employees() {
 
     const save = async () => {
         if (!form.name.trim()) return;
-        if (editing) {
-            await supabaseService.employees.update(editing, form);
-        } else {
-            await supabaseService.employees.add({ ...form, createdAt: new Date().toISOString() });
+        setSaving(true);
+        setError('');
+        try {
+            if (editing) {
+                await supabaseService.employees.update(editing, form);
+            } else {
+                await supabaseService.employees.add({ ...form, createdAt: new Date().toISOString() });
+            }
+            setShowModal(false);
+        } catch (err) {
+            console.error('Error saving employee:', err);
+            setError('Failed to save employee. Please try again.');
+        } finally {
+            setSaving(false);
         }
-        setShowModal(false);
     };
 
     return (
@@ -124,9 +136,14 @@ export default function Employees() {
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{editing ? 'Edit Employee' : 'Add Employee'}</h2>
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>✕</button>
+                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} disabled={saving}>✕</button>
                         </div>
                         <div className="modal-body">
+                            {error && (
+                                <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--danger)', fontSize: 'var(--fs-sm)' }}>
+                                    {error}
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label className="form-label">Name *</label>
                                 <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
@@ -154,9 +171,9 @@ export default function Employees() {
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.name.trim()}>
-                                {editing ? 'Update' : 'Add'} Employee
+                            <button className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
+                            <button className="btn btn-primary" onClick={save} disabled={!form.name.trim() || saving}>
+                                {saving ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update' : 'Add') + ' Employee'}
                             </button>
                         </div>
                     </div>

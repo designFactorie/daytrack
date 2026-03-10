@@ -60,31 +60,48 @@ export default function ClientProfile() {
 
     const saveField = async () => {
         if (!editingField) return;
-        await supabaseService.clients.update(Number(id), { [editingField]: editValue });
-        setEditingField(null);
-        setEditValue('');
+        try {
+            await supabaseService.clients.update(Number(id), { [editingField]: editValue });
+            setEditingField(null);
+            setEditValue('');
+        } catch (err) {
+            console.error('Error saving field:', err);
+            alert('Failed to save. Please try again.');
+        }
     };
 
     const toggleTaskComplete = async (taskId, currentStatus, e) => {
         e.stopPropagation();
         const isCompleted = currentStatus === 'Completed';
-        await supabaseService.tasks.update(taskId, {
-            status: isCompleted ? 'Pending' : 'Completed',
-            completedDate: isCompleted ? '' : new Date().toISOString().split('T')[0]
-        });
+        try {
+            await supabaseService.tasks.update(taskId, {
+                status: isCompleted ? 'Pending' : 'Completed',
+                completedDate: isCompleted ? null : new Date().toISOString().split('T')[0]
+            });
+        } catch (err) {
+            console.error('Error toggling task:', err);
+            alert('Failed to update task.');
+        }
     };
 
     const saveTask = async () => {
         if (!taskForm.title.trim()) return;
-        const data = {
-            ...taskForm,
-            clientId: Number(id),
-            employeeId: taskForm.employeeId ? Number(taskForm.employeeId) : null,
-            createdDate: new Date().toISOString().split('T')[0]
-        };
-        await supabaseService.tasks.add(data);
-        setShowTaskModal(false);
-        setTaskForm({ ...defaultTask });
+        try {
+            const data = {
+                ...taskForm,
+                clientId: Number(id),
+                employeeId: taskForm.employeeId ? Number(taskForm.employeeId) : null,
+                dueDate: taskForm.dueDate || null,
+                createdDate: new Date().toISOString().split('T')[0],
+                completedDate: taskForm.completedDate || null
+            };
+            await supabaseService.tasks.add(data);
+            setShowTaskModal(false);
+            setTaskForm({ ...defaultTask });
+        } catch (err) {
+            console.error('Error saving task:', err);
+            alert('Failed to save task. Please try again.');
+        }
     };
 
     return (

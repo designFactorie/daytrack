@@ -18,6 +18,8 @@ export default function Tasks() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ ...defaultTask });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
     const tasks = useSupabaseData('tasks') || [];
     const clients = (useSupabaseData('clients') || []).filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
@@ -51,6 +53,7 @@ export default function Tasks() {
     const openAdd = () => {
         setEditing(null);
         setForm({ ...defaultTask, clientIds: [] });
+        setError('');
         setShowModal(true);
     };
 
@@ -69,28 +72,37 @@ export default function Tasks() {
 
     const save = async () => {
         if (!form.title.trim()) return;
-        const baseData = {
-            title: form.title,
-            description: form.description,
-            employeeId: Number(form.employeeId) || null,
-            priority: form.priority,
-            status: form.status,
-            dueDate: form.dueDate,
-            completedDate: form.completedDate,
-        };
-        if (baseData.status === 'Completed' && !baseData.completedDate) {
-            baseData.completedDate = new Date().toISOString().split('T')[0];
-        }
-        if (editing) {
-            await supabaseService.tasks.update(editing, { ...baseData, clientId: Number(form.clientId) || (form.clientIds?.[0] || null) });
-        } else {
-            const selectedClients = (form.clientIds || []).length > 0 ? form.clientIds : [null];
-            const createdDate = new Date().toISOString().split('T')[0];
-            for (const cid of selectedClients) {
-                await supabaseService.tasks.add({ ...baseData, clientId: cid, createdDate });
+        setSaving(true);
+        setError('');
+        try {
+            const baseData = {
+                title: form.title,
+                description: form.description,
+                employeeId: Number(form.employeeId) || null,
+                priority: form.priority,
+                status: form.status,
+                dueDate: form.dueDate || null,
+                completedDate: form.completedDate || null,
+            };
+            if (baseData.status === 'Completed' && !baseData.completedDate) {
+                baseData.completedDate = new Date().toISOString().split('T')[0];
             }
+            if (editing) {
+                await supabaseService.tasks.update(editing, { ...baseData, clientId: Number(form.clientId) || (form.clientIds?.[0] || null) });
+            } else {
+                const selectedClients = (form.clientIds || []).length > 0 ? form.clientIds : [null];
+                const createdDate = new Date().toISOString().split('T')[0];
+                for (const cid of selectedClients) {
+                    await supabaseService.tasks.add({ ...baseData, clientId: cid, createdDate });
+                }
+            }
+            setShowModal(false);
+        } catch (err) {
+            console.error('Error saving task:', err);
+            setError('Failed to save task. Please try again.');
+        } finally {
+            setSaving(false);
         }
-        setShowModal(false);
     };
 
     const toggleComplete = async (id, currentStatus, e) => {
@@ -232,9 +244,14 @@ export default function Tasks() {
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{editing ? 'Edit Task' : 'Add Task'}</h2>
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>✕</button>
+                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} disabled={saving}>✕</button>
                         </div>
                         <div className="modal-body">
+                            {error && (
+                                <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)', color: 'var(--danger)', fontSize: 'var(--fs-sm)' }}>
+                                    {error}
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label className="form-label">Title *</label>
                                 <input className="form-input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Task title" />
@@ -299,9 +316,9 @@ export default function Tasks() {
                                     Delete
                                 </button>
                             )}
-                            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.title.trim()}>
-                                {editing ? 'Update' : 'Add'} Task
+                            <button className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
+                            <button className="btn btn-primary" onClick={save} disabled={!form.title.trim() || saving}>
+                                {saving ? (editing ? 'Updating...' : 'Adding...') : (editing ? 'Update' : 'Add') + ' Task'}
                             </button>
                         </div>
                     </div>

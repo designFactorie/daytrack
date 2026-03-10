@@ -129,17 +129,22 @@ export default function MOMCreate() {
 
     const convertToTask = async (actionText) => {
         if (!clientId) return;
-        await supabaseService.tasks.add({
-            title: actionText,
-            description: `Created from MOM action item`,
-            clientId: Number(clientId),
-            employeeId: null,
-            priority: 'Medium',
-            status: 'Pending',
-            dueDate: '',
-            createdDate: new Date().toISOString().split('T')[0],
-            completedDate: null
-        });
+        try {
+            await supabaseService.tasks.add({
+                title: actionText,
+                description: `Created from MOM action item`,
+                clientId: Number(clientId),
+                employeeId: null,
+                priority: 'Medium',
+                status: 'Pending',
+                dueDate: null,
+                createdDate: new Date().toISOString().split('T')[0],
+                completedDate: null
+            });
+        } catch (err) {
+            console.error('Error converting action item to task:', err);
+            setError('Failed to create task from action item.');
+        }
     };
 
     const save = async () => {
@@ -157,42 +162,35 @@ export default function MOMCreate() {
             return;
         }
 
-        setSaving(true);
-        setError('');
+        try {
+            const momData = {
+                clientId: Number(clientId),
+                meetingDate: form.meetingDate,
+                meetingType: form.meetingType,
+                participants: form.participants || null,
+                discussionPoints: form.discussionPoints || null,
+                decisions: form.decisions || null,
+                actionItems: form.actionItems || [],
+                blockers: form.blockers || null,
+                clientFeedback: form.clientFeedback || null,
+                previousDaySummary: form.previousDaySummary || null,
+                todaysSummary: form.todaysSummary || null,
+                carryForwardItems: carryForward || [],
+            };
 
-        // Process previous action items
-        const carryForward = previousActionItems
-            .filter(a => a.status === 'carry')
-            .map(a => ({ text: a.text, status: 'pending' }));
-
-        // Convert task items
-        for (const item of previousActionItems.filter(a => a.status === 'task')) {
-            await convertToTask(item.text);
+            if (editId) {
+                await supabaseService.moms.update(Number(editId), momData);
+            } else {
+                momData.createdAt = new Date().toISOString();
+                await supabaseService.moms.add(momData);
+            }
+            navigate('/mom');
+        } catch (err) {
+            console.error('Error saving MOM:', err);
+            setError('Failed to save MOM. Please check your connection.');
+        } finally {
+            setSaving(false);
         }
-
-        const momData = {
-            clientId: Number(clientId),
-            meetingDate: form.meetingDate,
-            meetingType: form.meetingType,
-            participants: form.participants,
-            discussionPoints: form.discussionPoints,
-            decisions: form.decisions,
-            actionItems: form.actionItems,
-            blockers: form.blockers,
-            clientFeedback: form.clientFeedback,
-            previousDaySummary: form.previousDaySummary,
-            todaysSummary: form.todaysSummary,
-            carryForwardItems: carryForward,
-        };
-
-        if (editId) {
-            await supabaseService.moms.update(Number(editId), momData);
-        } else {
-            momData.createdAt = new Date().toISOString();
-            await supabaseService.moms.add(momData);
-        }
-
-        navigate('/mom');
     };
 
     return (
