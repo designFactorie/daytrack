@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit2, UserCog } from 'lucide-react';
+import { Plus, Search, Edit2, UserCog, Trash2 } from 'lucide-react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { supabaseService } from '../db/supabaseService';
 
@@ -65,6 +65,18 @@ export default function Employees() {
         }
     };
 
+    const handleDelete = async (e, id) => {
+        e.stopPropagation(); // Prevent opening edit modal
+        if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return;
+
+        try {
+            await supabaseService.employees.delete(id);
+            await refresh();
+        } catch (err) {
+            alert('Failed to delete employee: ' + err.message);
+        }
+    };
+
     return (
         <div>
             <div className="page-header flex items-center justify-between">
@@ -114,9 +126,18 @@ export default function Employees() {
                                     <div style={{ fontWeight: 600 }}>{emp.name}</div>
                                     <div className="text-sm text-muted">{emp.role || 'No role set'}</div>
                                 </div>
-                                <span className={`badge ${emp.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
-                                    {emp.status}
-                                </span>
+                                <div className="flex gap-2 items-center">
+                                    <span className={`badge ${emp.status === 'Active' ? 'badge-active' : 'badge-inactive'}`}>
+                                        {emp.status}
+                                    </span>
+                                    <button
+                                        className="btn btn-ghost btn-sm text-danger"
+                                        onClick={(e) => handleDelete(e, emp.id)}
+                                        title="Delete Employee"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex gap-4 text-sm text-muted">
                                 {emp.email && <span>📧 {emp.email}</span>}
