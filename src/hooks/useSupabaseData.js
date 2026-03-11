@@ -37,5 +37,5 @@ export function useSupabaseData(table, queryBuilder = (q) => q) {
         };
     }, [table]);
 
-    return data;
+    return { data, loading, error, refresh: fetchData };
 }

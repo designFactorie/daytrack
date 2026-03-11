@@ -16,8 +16,8 @@ export default function Employees() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    const employees = useSupabaseData('employees') || [];
-    const tasks = useSupabaseData('tasks') || [];
+    const { data: employees = [], refresh } = useSupabaseData('employees');
+    const { data: tasks = [] } = useSupabaseData('tasks');
 
     const filtered = employees.filter(e => {
         if (statusFilter !== 'All' && e.status !== statusFilter) return false;
@@ -55,6 +55,7 @@ export default function Employees() {
             } else {
                 await supabaseService.employees.add({ ...form, createdAt: new Date().toISOString() });
             }
+            await refresh();
             setShowModal(false);
         } catch (err) {
             console.error('Error saving employee:', err);

@@ -22,7 +22,7 @@ export default function Clients() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    const clients = useSupabaseData('clients') || [];
+    const { data: clients = [], refresh } = useSupabaseData('clients');
 
     const filtered = clients.filter(c => {
         if (c.archived && statusFilter !== 'Archived') return false;
@@ -70,6 +70,7 @@ export default function Clients() {
                 data.createdAt = new Date().toISOString();
                 await supabaseService.clients.add(data);
             }
+            await refresh();
             setShowModal(false);
         } catch (err) {
             console.error('Error saving client:', err);
@@ -81,6 +82,7 @@ export default function Clients() {
 
     const archive = async (id) => {
         await supabaseService.clients.update(id, { archived: true });
+        await refresh();
     };
 
     const formatCurrency = (val) => {

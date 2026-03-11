@@ -12,11 +12,13 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const today = new Date().toISOString().split('T')[0];
 
-    const clients = (useSupabaseData('clients') || []).filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
+    const { data: clientsData = [] } = useSupabaseData('clients');
+    const clients = clientsData.filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
     const activeClients = clients.filter(c => c.status === 'Active');
-    const employees = useSupabaseData('employees') || [];
-    const tasks = useSupabaseData('tasks') || [];
-    const todayMoms = (useSupabaseData('moms') || []).filter(m => m.meetingDate === today);
+    const { data: employees = [] } = useSupabaseData('employees');
+    const { data: tasks = [] } = useSupabaseData('tasks');
+    const { data: momsData = [] } = useSupabaseData('moms');
+    const todayMoms = momsData.filter(m => m.meetingDate === today);
 
     const tasksDueToday = tasks.filter(t => t.dueDate === today && t.status !== 'Completed');
     const overdueTasks = tasks.filter(t => t.dueDate < today && t.status !== 'Completed');

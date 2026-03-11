@@ -19,9 +19,10 @@ export default function MOMList() {
     const [summaryText, setSummaryText] = useState('');
     const [summaryLoading, setSummaryLoading] = useState(false);
 
-    const clients = (useSupabaseData('clients') || []).filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
+    const { data: clientsData = [] } = useSupabaseData('clients');
+    const clients = clientsData.filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
     const activeClients = clients.filter(c => c.status === 'Active');
-    const allMoms = useSupabaseData('moms', q => q.order('meetingDate', { ascending: false })) || [];
+    const { data: allMoms = [], refresh: refreshMoms } = useSupabaseData('moms', q => q.order('meetingDate', { ascending: false }));
     const todayMoms = allMoms.filter(m => m.meetingDate === today);
 
     useEffect(() => {
@@ -65,6 +66,7 @@ export default function MOMList() {
         e.stopPropagation();
         if (!window.confirm('Delete this MOM? This cannot be undone.')) return;
         await supabaseService.moms.delete(momId);
+        await refreshMoms();
     };
 
     return (

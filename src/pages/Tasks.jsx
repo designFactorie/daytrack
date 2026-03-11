@@ -21,9 +21,10 @@ export default function Tasks() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    const tasks = useSupabaseData('tasks') || [];
-    const clients = (useSupabaseData('clients') || []).filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
-    const employees = useSupabaseData('employees') || [];
+    const { data: tasks = [], refresh: refreshTasks } = useSupabaseData('tasks');
+    const { data: clientsData = [] } = useSupabaseData('clients');
+    const clients = clientsData.filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
+    const { data: employees = [] } = useSupabaseData('employees');
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -96,6 +97,7 @@ export default function Tasks() {
                     await supabaseService.tasks.add({ ...baseData, clientId: cid, createdDate });
                 }
             }
+            await refreshTasks();
             setShowModal(false);
         } catch (err) {
             console.error('Error saving task:', err);
@@ -112,10 +114,12 @@ export default function Tasks() {
             status: isCompleted ? 'Pending' : 'Completed',
             completedDate: isCompleted ? '' : new Date().toISOString().split('T')[0]
         });
+        await refreshTasks();
     };
 
     const deleteTask = async (id) => {
         await supabaseService.tasks.delete(id);
+        await refreshTasks();
         setShowModal(false);
     };
 

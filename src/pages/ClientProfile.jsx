@@ -19,11 +19,11 @@ export default function ClientProfile() {
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [taskForm, setTaskForm] = useState({ ...defaultTask });
 
-    const clientsData = useSupabaseData('clients', q => q.eq('id', Number(id))) || [];
+    const { data: clientsData = [], refresh: refreshClient } = useSupabaseData('clients', q => q.eq('id', Number(id)));
     const client = clientsData[0];
-    const tasks = useSupabaseData('tasks', q => q.eq('clientId', Number(id))) || [];
-    const moms = useSupabaseData('moms', q => q.eq('clientId', Number(id)).order('meetingDate', { ascending: false })) || [];
-    const employees = useSupabaseData('employees') || [];
+    const { data: tasks = [], refresh: refreshTasks } = useSupabaseData('tasks', q => q.eq('clientId', Number(id)));
+    const { data: moms = [] } = useSupabaseData('moms', q => q.eq('clientId', Number(id)).order('meetingDate', { ascending: false }));
+    const { data: employees = [] } = useSupabaseData('employees');
 
     if (!client) {
         return (
@@ -62,6 +62,7 @@ export default function ClientProfile() {
         if (!editingField) return;
         try {
             await supabaseService.clients.update(Number(id), { [editingField]: editValue });
+            await refreshClient();
             setEditingField(null);
             setEditValue('');
         } catch (err) {
@@ -78,6 +79,7 @@ export default function ClientProfile() {
                 status: isCompleted ? 'Pending' : 'Completed',
                 completedDate: isCompleted ? null : new Date().toISOString().split('T')[0]
             });
+            await refreshTasks();
         } catch (err) {
             console.error('Error toggling task:', err);
             alert('Failed to update task.');
@@ -96,6 +98,7 @@ export default function ClientProfile() {
                 completedDate: taskForm.completedDate || null
             };
             await supabaseService.tasks.add(data);
+            await refreshTasks();
             setShowTaskModal(false);
             setTaskForm({ ...defaultTask });
         } catch (err) {
