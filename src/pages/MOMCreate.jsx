@@ -32,7 +32,8 @@ export default function MOMCreate() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    const clients = (useSupabaseData('clients') || []).filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
+    const { data: clientsData = [] } = useSupabaseData('clients');
+    const clients = clientsData.filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
 
     // Check AI availability
     useEffect(() => {

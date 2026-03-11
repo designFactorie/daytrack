@@ -7,9 +7,9 @@ export default function MOMView() {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const moms = useSupabaseData('moms', q => q.eq('id', Number(id))) || [];
+    const { data: moms = [] } = useSupabaseData('moms', q => q.eq('id', Number(id)));
     const mom = moms[0];
-    const clients = useSupabaseData('clients') || [];
+    const { data: clients = [] } = useSupabaseData('clients');
 
     if (!mom) {
         return (

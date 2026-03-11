@@ -7,9 +7,10 @@ export default function Calendar() {
     const [selectedDate, setSelectedDate] = useState(null);
     const [showModal, setShowModal] = useState(false);
 
-    const tasks = useSupabaseData('tasks') || [];
-    const clients = (useSupabaseData('clients') || []).sort((a, b) => a.name.localeCompare(b.name));
-    const employees = useSupabaseData('employees') || [];
+    const { data: tasks = [] } = useSupabaseData('tasks');
+    const { data: clientsData = [] } = useSupabaseData('clients');
+    const clients = clientsData.sort((a, b) => a.name.localeCompare(b.name));
+    const { data: employees = [] } = useSupabaseData('employees');
 
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -32,8 +33,8 @@ export default function Calendar() {
         for (let i = firstDay - 1; i >= 0; i--) {
             days.push({
                 day: prevMonthTotalDays - i,
-                month: month - 1,
-                year: year,
+                month: month === 0 ? 11 : month - 1,
+                year: month === 0 ? year - 1 : year,
                 currentMonth: false
             });
         }
@@ -53,8 +54,8 @@ export default function Calendar() {
         for (let i = 1; i <= remainingSlots; i++) {
             days.push({
                 day: i,
-                month: month + 1,
-                year: year,
+                month: month === 11 ? 0 : month + 1,
+                year: month === 11 ? year + 1 : year,
                 currentMonth: false
             });
         }
