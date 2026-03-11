@@ -167,7 +167,19 @@ export default function Clients() {
                                             {client.phone && <div className="text-sm text-muted">{client.phone}</div>}
                                         </td>
                                         <td><span className={`badge ${getStatusClass(client.status)}`}>{client.status}</span></td>
-                                        <td>{formatCurrency(client.revenueValue)}</td>
+                                        <td>
+                                            <div style={{ marginBottom: 4 }}>{formatCurrency(client.revenueValue)}</div>
+                                            <div className="progress-bar-container" style={{ height: 4, width: '100%' }}>
+                                                <div
+                                                    className="progress-bar-fill"
+                                                    style={{
+                                                        width: `${Math.min(100, (Number(client.amountCollected) || 0) / (Number(client.revenueValue) || 1) * 100)}%`,
+                                                        background: 'var(--success)',
+                                                        opacity: 0.6
+                                                    }}
+                                                />
+                                            </div>
+                                        </td>
                                         <td className="text-success">{formatCurrency(client.amountCollected)}</td>
                                         <td className={outstanding > 0 ? 'text-danger' : ''}>{formatCurrency(outstanding)}</td>
                                         <td>

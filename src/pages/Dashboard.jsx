@@ -19,6 +19,7 @@ export default function Dashboard() {
     const { data: tasks = [] } = useSupabaseData('tasks');
     const { data: momsData = [] } = useSupabaseData('moms');
     const todayMoms = momsData.filter(m => m.meetingDate === today);
+    const { data: tranches = [] } = useSupabaseData('payment_tranches');
 
     const tasksDueToday = tasks.filter(t => t.dueDate === today && t.status !== 'Completed');
     const overdueTasks = tasks.filter(t => t.dueDate < today && t.status !== 'Completed');
@@ -41,17 +42,29 @@ export default function Dashboard() {
     ].filter(d => d.value > 0);
 
     const formatCurrency = (val) => {
-        if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
-        if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-        if (val >= 1000) return `₹${(val / 1000).toFixed(1)}K`;
+        if (Math.abs(val) >= 10000000) return `₹${(val / 10000000).toFixed(1)}Cr`;
+        if (Math.abs(val) >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+        if (Math.abs(val) >= 1000) return `₹${(val / 1000).toFixed(1)}K`;
         return `₹${val}`;
     };
 
+    const overdueTranches = tranches.filter(t => t.status !== 'Paid' && t.dueDate < today);
+    const upcomingTranches = tranches.filter(t => t.status !== 'Paid' && t.dueDate >= today && t.dueDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+    const getClientName = (cid) => clients.find(c => c.id === cid)?.name || 'Unknown';
+
     return (
         <div>
-            <div className="page-header">
-                <h1>Dashboard</h1>
-                <p>Welcome back! Here's your overview for today.</p>
+            <div className="page-header flex justify-between items-end">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Welcome back! Here's your overview for today.</p>
+                </div>
+                <div style={{ textAlign: 'right', paddingBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--text-accent)' }}>
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    </div>
+                </div>
             </div>
 
             {/* Stat Cards */}
@@ -168,6 +181,79 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Collection Monitoring */}
+            <div className="mt-8">
+                <div className="flex items-center gap-2 mb-4">
+                    <DollarSign size={20} className="text-accent" />
+                    <h2 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>Collection Monitoring</h2>
+                </div>
+                <div className="grid-2">
+                    <div className="card">
+                        <div className="card-header">
+                            <span className="card-title text-danger flex items-center gap-2">
+                                <AlertTriangle size={16} /> Overdue Collections ({overdueTranches.length})
+                            </span>
+                        </div>
+                        {overdueTranches.length === 0 ? (
+                            <p className="text-muted text-sm p-4 text-center">No overdue tranches! Great job.</p>
+                        ) : (
+                            <div className="table-container" style={{ maxHeight: 300, overflowY: 'auto' }}>
+                                <table className="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Amount</th>
+                                            <th>Due Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {overdueTranches.map(t => (
+                                            <tr key={t.id} onClick={() => navigate(`/clients/${t.clientId}`)} style={{ cursor: 'pointer' }}>
+                                                <td style={{ fontWeight: 500 }}>{getClientName(t.clientId)}</td>
+                                                <td className="text-danger">₹{t.amount?.toLocaleString('en-IN')}</td>
+                                                <td className="text-danger">{t.dueDate}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">
+                            <span className="card-title text-warning flex items-center gap-2">
+                                <Clock size={16} /> Upcoming (Next 30 Days)
+                            </span>
+                        </div>
+                        {upcomingTranches.length === 0 ? (
+                            <p className="text-muted text-sm p-4 text-center">No tranches due in the next 30 days.</p>
+                        ) : (
+                            <div className="table-container" style={{ maxHeight: 300, overflowY: 'auto' }}>
+                                <table className="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Amount</th>
+                                            <th>Due Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {upcomingTranches.map(t => (
+                                            <tr key={t.id} onClick={() => navigate(`/clients/${t.clientId}`)} style={{ cursor: 'pointer' }}>
+                                                <td style={{ fontWeight: 500 }}>{getClientName(t.clientId)}</td>
+                                                <td>₹{t.amount?.toLocaleString('en-IN')}</td>
+                                                <td>{t.dueDate}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

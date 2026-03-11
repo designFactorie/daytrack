@@ -22,8 +22,13 @@ export default function ClientProfile() {
     const { data: clientsData = [], refresh: refreshClient } = useSupabaseData('clients', q => q.eq('id', Number(id)));
     const client = clientsData[0];
     const { data: tasks = [], refresh: refreshTasks } = useSupabaseData('tasks', q => q.eq('clientId', Number(id)));
+    const { data: tranches = [], refresh: refreshTranches } = useSupabaseData('payment_tranches', q => q.eq('clientId', Number(id)));
     const { data: moms = [] } = useSupabaseData('moms', q => q.eq('clientId', Number(id)).order('meetingDate', { ascending: false }));
     const { data: employees = [] } = useSupabaseData('employees');
+
+    const [trancheForm, setTrancheForm] = useState({ amount: '', dueDate: '', status: 'Pending', notes: '' });
+    const [showTrancheModal, setShowTrancheModal] = useState(false);
+    const [editingTrancheId, setEditingTrancheId] = useState(null);
 
     if (!client) {
         return (
@@ -125,13 +130,13 @@ export default function ClientProfile() {
 
             {/* Tabs */}
             <div className="tabs">
-                {['overview', 'revenue', 'tasks', 'mom-history'].map(tab => (
+                {['overview', 'revenue', 'payments', 'tasks', 'mom-history'].map(tab => (
                     <button
                         key={tab}
                         className={`tab ${activeTab === tab ? 'active' : ''}`}
                         onClick={() => setActiveTab(tab)}
                     >
-                        {tab === 'overview' ? 'Overview' : tab === 'revenue' ? 'Revenue & Notes' : tab === 'tasks' ? 'Tasks' : 'MOM History'}
+                        {tab === 'overview' ? 'Overview' : tab === 'revenue' ? 'Notes' : tab === 'payments' ? 'Payments' : tab === 'tasks' ? 'Tasks' : 'MOM History'}
                     </button>
                 ))}
             </div>
@@ -159,6 +164,11 @@ export default function ClientProfile() {
                             <div className="stat-icon purple"><FileText size={22} /></div>
                             <div className="stat-value">{moms.length}</div>
                             <div className="stat-label">Total MOMs</div>
+                        </div>
+                        <div className="stat-card" onClick={() => setActiveTab('payments')} style={{ cursor: 'pointer' }}>
+                            <div className="stat-icon green"><DollarSign size={22} /></div>
+                            <div className="stat-value">{tranches.filter(t => t.status === 'Paid').length} / {tranches.length}</div>
+                            <div className="stat-label">Tranches Paid</div>
                         </div>
                     </div>
 
@@ -191,7 +201,72 @@ export default function ClientProfile() {
                 </div>
             )}
 
-            {/* Revenue & Notes Tab */}
+            {/* Payments Tab */}
+            {activeTab === 'payments' && (
+                <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 style={{ fontSize: 'var(--fs-middle)', fontWeight: 600 }}>Payment Tranches</h3>
+                        <button className="btn btn-primary btn-sm" onClick={() => { setEditingTrancheId(null); setTrancheForm({ amount: '', dueDate: '', status: 'Pending', notes: '' }); setShowTrancheModal(true); }}>
+                            <Plus size={16} /> Add Tranche
+                        </button>
+                    </div>
+
+                    {tranches.length === 0 ? (
+                        <div className="card">
+                            <div className="empty-state">
+                                <DollarSign size={48} />
+                                <h3>No payment tranches set</h3>
+                                <p>Divide the yearly payment into tranches to track collections.</p>
+                                <button className="btn btn-primary mt-4" onClick={() => { setEditingTrancheId(null); setTrancheForm({ amount: '', dueDate: '', status: 'Pending', notes: '' }); setShowTrancheModal(true); }}>
+                                    <Plus size={18} /> Add First Tranche
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="table-container">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>Tranche</th>
+                                        <th>Amount</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                        <th>Paid Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tranches.map((t, i) => (
+                                        <tr key={t.id}>
+                                            <td style={{ fontWeight: 600 }}>Tranche {i + 1}</td>
+                                            <td>₹{Number(t.amount).toLocaleString('en-IN')}</td>
+                                            <td>{t.dueDate || '—'}</td>
+                                            <td>
+                                                <span className={`badge ${t.status === 'Paid' ? 'badge-completed' : 'badge-pending'}`}>
+                                                    {t.status}
+                                                </span>
+                                            </td>
+                                            <td>{t.paidDate || '—'}</td>
+                                            <td>
+                                                <div className="flex gap-2">
+                                                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditingTrancheId(t.id); setTrancheForm({ ...t }); setShowTrancheModal(true); }}>
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button className="btn btn-ghost btn-sm" onClick={async () => { if (confirm('Delete this tranche?')) { await supabaseService.tranches.delete(t.id); refreshTranches(); } }}>
+                                                        <X size={16} color="var(--danger)" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Notes Tab (formerly Revenue & Notes) */}
             {activeTab === 'revenue' && (
                 <div className="grid-2">
                     <div className="card">
@@ -455,6 +530,62 @@ export default function ClientProfile() {
                             <button className="btn btn-secondary" onClick={() => setShowTaskModal(false)}>Cancel</button>
                             <button className="btn btn-primary" onClick={saveTask} disabled={!taskForm.title.trim()}>
                                 Create Task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Tranche Modal */}
+            {showTrancheModal && (
+                <div className="modal-overlay" onClick={() => setShowTrancheModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>{editingTrancheId ? 'Edit Tranche' : 'Add Tranche'}</h2>
+                            <button className="btn btn-ghost" onClick={() => setShowTrancheModal(false)}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label className="form-label">Amount (₹) *</label>
+                                <input className="form-input" type="number" value={trancheForm.amount} onChange={e => setTrancheForm({ ...trancheForm, amount: e.target.value })} placeholder="0" />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Due Date *</label>
+                                <DatePicker value={trancheForm.dueDate} onChange={val => setTrancheForm({ ...trancheForm, dueDate: val })} placeholder="Due date" />
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Status</label>
+                                    <select className="form-select" value={trancheForm.status} onChange={e => setTrancheForm({ ...trancheForm, status: e.target.value })}>
+                                        <option>Pending</option>
+                                        <option>Paid</option>
+                                    </select>
+                                </div>
+                                {trancheForm.status === 'Paid' && (
+                                    <div className="form-group">
+                                        <label className="form-label">Paid Date</label>
+                                        <DatePicker value={trancheForm.paidDate} onChange={val => setTrancheForm({ ...trancheForm, paidDate: val })} placeholder="Date of payment" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Notes</label>
+                                <textarea className="form-textarea" value={trancheForm.notes} onChange={e => setTrancheForm({ ...trancheForm, notes: e.target.value })} placeholder="Payment details..." rows={2} />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={() => setShowTrancheModal(false)}>Cancel</button>
+                            <button className="btn btn-primary" onClick={async () => {
+                                if (!trancheForm.amount || !trancheForm.dueDate) return;
+                                const data = { ...trancheForm, clientId: Number(id), amount: Number(trancheForm.amount) };
+                                if (editingTrancheId) {
+                                    await supabaseService.tranches.update(editingTrancheId, data);
+                                } else {
+                                    await supabaseService.tranches.add(data);
+                                }
+                                refreshTranches();
+                                setShowTrancheModal(false);
+                            }}>
+                                {editingTrancheId ? 'Update' : 'Add'} Tranche
                             </button>
                         </div>
                     </div>
