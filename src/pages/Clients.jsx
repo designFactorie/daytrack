@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Archive, Edit2, Eye, DollarSign, Users } from 'lucide-react';
+import { Plus, Search, Archive, Edit2, Eye, DollarSign, Users, RotateCcw, Trash2 } from 'lucide-react';
 import DatePicker from '../components/DatePicker';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { supabaseService } from '../db/supabaseService';
@@ -81,8 +81,24 @@ export default function Clients() {
     };
 
     const archive = async (id) => {
+        if (!confirm('Are you sure you want to archive this client?')) return;
         await supabaseService.clients.update(id, { archived: true });
         await refresh();
+    };
+
+    const restore = async (id) => {
+        await supabaseService.clients.update(id, { archived: false });
+        await refresh();
+    };
+
+    const deleteClient = async (id) => {
+        if (!confirm('Are you SURE? This will permanently delete the client and all associated tasks, MOMs, and payments. This cannot be undone.')) return;
+        try {
+            await supabaseService.clients.delete(id);
+            await refresh();
+        } catch (err) {
+            alert('Failed to delete client: ' + err.message);
+        }
     };
 
     const formatCurrency = (val) => {
@@ -190,11 +206,18 @@ export default function Clients() {
                                                 <button className="btn btn-ghost btn-sm" onClick={() => openEdit(client)} title="Edit">
                                                     <Edit2 size={16} />
                                                 </button>
-                                                {!client.archived && (
+                                                {!client.archived ? (
                                                     <button className="btn btn-ghost btn-sm" onClick={() => archive(client.id)} title="Archive">
                                                         <Archive size={16} />
                                                     </button>
+                                                ) : (
+                                                    <button className="btn btn-ghost btn-sm text-success" onClick={() => restore(client.id)} title="Restore from Archive">
+                                                        <RotateCcw size={16} />
+                                                    </button>
                                                 )}
+                                                <button className="btn btn-ghost btn-sm text-danger" onClick={() => deleteClient(client.id)} title="Delete Permanently">
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
